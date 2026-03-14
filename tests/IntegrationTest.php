@@ -77,10 +77,10 @@ class IntegrationTest extends TestCase
         $this->assertEquals('finished', $result['status']);
     }
 
-    public function testCreateInvalidUrl(): void
+    public function testCreateEmptyUrl(): void
     {
-        $this->expectException(\ScreenshotCenter\Errors\ApiError::class);
-        $this->client->screenshot->create('not-valid-url-xyz');
+        $this->expectException(\InvalidArgumentException::class);
+        $this->client->screenshot->create('');
     }
 
     // ── screenshot.info ───────────────────────────────────────────────────────

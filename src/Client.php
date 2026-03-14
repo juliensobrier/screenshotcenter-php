@@ -134,8 +134,19 @@ class Client
         foreach ($all as $k => $v) {
             if ($v === null) continue;
             if (is_array($v)) {
+                $hasObjects = false;
                 foreach ($v as $item) {
-                    $parts[] = urlencode($k) . '=' . urlencode((string)$item);
+                    if (is_array($item) || is_object($item)) {
+                        $hasObjects = true;
+                        break;
+                    }
+                }
+                if ($hasObjects) {
+                    $parts[] = urlencode($k) . '=' . urlencode(json_encode($v));
+                } else {
+                    foreach ($v as $item) {
+                        $parts[] = urlencode($k) . '=' . urlencode((string)$item);
+                    }
                 }
             } elseif (is_bool($v)) {
                 $parts[] = urlencode($k) . '=' . ($v ? 'true' : 'false');

@@ -412,6 +412,59 @@ test('account info sends API key', function () use ($ACCOUNT) {
     assertContains2('key=test-key', $calls[0]['url']);
 });
 
+// steps / trackers serialization
+test('steps serialized as JSON when array contains objects', function () use ($SCREENSHOT) {
+    $calls  = [];
+    $steps  = [['command' => 'click', 'element' => '#accept'], ['command' => 'sleep', 'value' => 2]];
+    $client = captureClient($calls, [jsonResp($SCREENSHOT)]);
+    $client->screenshot->create('https://example.com', ['steps' => $steps]);
+    $parts = parse_url($calls[0]['url']);
+    parse_str($parts['query'], $query);
+    $decoded = json_decode($query['steps'], true);
+    assertSame2($steps, $decoded);
+});
+
+test('trackers serialized as JSON when array contains objects', function () use ($SCREENSHOT) {
+    $calls    = [];
+    $trackers = [['id' => 'ga', 'name' => 'GA', 'value' => 'UA-12345']];
+    $client   = captureClient($calls, [jsonResp($SCREENSHOT)]);
+    $client->screenshot->create('https://example.com', ['trackers' => $trackers]);
+    $parts = parse_url($calls[0]['url']);
+    parse_str($parts['query'], $query);
+    $decoded = json_decode($query['trackers'], true);
+    assertSame2($trackers, $decoded);
+});
+
+test('primitive array expanded as repeated keys', function () use ($SCREENSHOT) {
+    $calls  = [];
+    $client = captureClient($calls, [jsonResp($SCREENSHOT)]);
+    $client->screenshot->create('https://example.com', ['tag' => ['homepage', 'prod']]);
+    assertContains2('tag=homepage', $calls[0]['url']);
+    assertContains2('tag=prod', $calls[0]['url']);
+});
+
+test('steps does not produce "Array" string', function () use ($SCREENSHOT) {
+    $calls  = [];
+    $client = captureClient($calls, [jsonResp($SCREENSHOT)]);
+    $client->screenshot->create('https://example.com', ['steps' => [['command' => 'click']]]);
+    if (strpos($calls[0]['url'], 'steps=Array') !== false) {
+        throw new \AssertionError('steps should not be serialized as "Array"');
+    }
+});
+
+test('steps produces valid JSON', function () use ($SCREENSHOT) {
+    $calls  = [];
+    $steps  = [['command' => 'click', 'element' => 'button']];
+    $client = captureClient($calls, [jsonResp($SCREENSHOT)]);
+    $client->screenshot->create('https://example.com', ['steps' => $steps]);
+    $parts = parse_url($calls[0]['url']);
+    parse_str($parts['query'], $query);
+    $decoded = json_decode($query['steps'], true);
+    if ($decoded === null) {
+        throw new \AssertionError('steps param is not valid JSON');
+    }
+});
+
 // Error classes
 test('ApiError has correct properties', function () {
     $e = new ApiError('Bad request', 400, 'INVALID_PARAMS', ['url' => ['required']]);

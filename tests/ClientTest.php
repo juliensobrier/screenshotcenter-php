@@ -322,6 +322,80 @@ class ClientTest extends TestCase
         unlink($tmpFile);
     }
 
+    // ── steps / trackers serialization ─────────────────────────────────────
+
+    public function testStepsSerializedAsJson(): void
+    {
+        $called = null;
+        $steps = [['command' => 'click', 'element' => '#accept'], ['command' => 'sleep', 'value' => 2]];
+        $transport = function ($m, $url) use (&$called) {
+            $called = $url;
+            return $this->jsonResp(self::$screenshot);
+        };
+        $client = new Client('test-key', 'https://api.screenshotcenter.com/api/v1', 30, $transport);
+        $client->screenshot->create('https://example.com', ['steps' => $steps]);
+        $parts = parse_url($called);
+        parse_str($parts['query'], $query);
+        $decoded = json_decode($query['steps'], true);
+        $this->assertEquals($steps, $decoded);
+    }
+
+    public function testTrackersSerializedAsJson(): void
+    {
+        $called = null;
+        $trackers = [['id' => 'ga', 'name' => 'GA', 'value' => 'UA-12345']];
+        $transport = function ($m, $url) use (&$called) {
+            $called = $url;
+            return $this->jsonResp(self::$screenshot);
+        };
+        $client = new Client('test-key', 'https://api.screenshotcenter.com/api/v1', 30, $transport);
+        $client->screenshot->create('https://example.com', ['trackers' => $trackers]);
+        $parts = parse_url($called);
+        parse_str($parts['query'], $query);
+        $decoded = json_decode($query['trackers'], true);
+        $this->assertEquals($trackers, $decoded);
+    }
+
+    public function testPrimitiveArrayExpandedAsRepeatedKeys(): void
+    {
+        $called = null;
+        $transport = function ($m, $url) use (&$called) {
+            $called = $url;
+            return $this->jsonResp(self::$screenshot);
+        };
+        $client = new Client('test-key', 'https://api.screenshotcenter.com/api/v1', 30, $transport);
+        $client->screenshot->create('https://example.com', ['tag' => ['homepage', 'prod']]);
+        $this->assertStringContainsString('tag=homepage', $called);
+        $this->assertStringContainsString('tag=prod', $called);
+    }
+
+    public function testStepsNotStringifiedAsPhpArray(): void
+    {
+        $called = null;
+        $transport = function ($m, $url) use (&$called) {
+            $called = $url;
+            return $this->jsonResp(self::$screenshot);
+        };
+        $client = new Client('test-key', 'https://api.screenshotcenter.com/api/v1', 30, $transport);
+        $client->screenshot->create('https://example.com', ['steps' => [['command' => 'click']]]);
+        $this->assertStringNotContainsString('Array', $called);
+    }
+
+    public function testStepsProducesValidJson(): void
+    {
+        $called = null;
+        $steps = [['command' => 'click', 'element' => 'button']];
+        $transport = function ($m, $url) use (&$called) {
+            $called = $url;
+            return $this->jsonResp(self::$screenshot);
+        };
+        $client = new Client('test-key', 'https://api.screenshotcenter.com/api/v1', 30, $transport);
+        $client->screenshot->create('https://example.com', ['steps' => $steps]);
+        $parts = parse_url($called);
+        parse_str($parts['query'], $query);
+        $this->assertNotNull(json_decode($query['steps'], true));
+    }
+
     // ── waitFor ──────────────────────────────────────────────────────────────
 
     public function testWaitForResolvesOnFinished(): void
