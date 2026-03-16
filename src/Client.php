@@ -32,6 +32,8 @@ class Client
     public $screenshot;
     /** @var BatchNamespace */
     public $batch;
+    /** @var CrawlNamespace */
+    public $crawl;
     /** @var AccountNamespace */
     public $account;
 
@@ -55,6 +57,7 @@ class Client
 
         $this->screenshot = new ScreenshotNamespace($this);
         $this->batch      = new BatchNamespace($this);
+        $this->crawl      = new CrawlNamespace($this);
         $this->account    = new AccountNamespace($this);
     }
 
